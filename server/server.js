@@ -4,6 +4,7 @@ const express = require('express');
 const _ = require('lodash');
 const bodyParser = require('body-parser');
 const {ObjectID} = require('mongodb');
+const cors = require('cors');
 
 const {mongoose} = require('./db/mongoose');
 const {Pigeon} = require('./models/pigeon');
@@ -12,6 +13,7 @@ var app = express();
 const port = process.env.PORT || 3000;
 
 app.use(bodyParser.json());
+app.use(cors());
 
 app.post('/pigeons', (req, res) => {
     var pigeon = new Pigeon({
