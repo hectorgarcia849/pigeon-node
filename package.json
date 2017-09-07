@@ -1,0 +1,26 @@
+{
+  "name": "pigeon",
+  "version": "1.0.0",
+  "description": "Backend web application for the social network application Pigeon",
+  "main": "index.js",
+  "scripts": {
+    "start": "export NODE_ENV=development || SET \"NODE_ENV=development\" && node server/server.js",
+    "test": "export NODE_ENV=test || SET \"NODE_ENV=test\" && mocha server/**/*.test.js",
+    "test-watch": "nodemon --exec \"npm test\""
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "body-parser": "^1.17.2",
+    "express": "^4.15.4",
+    "lodash": "^4.17.4",
+    "mongodb": "^2.2.31",
+    "mongoose": "^4.11.10"
+  },
+  "devDependencies": {
+    "expect": "^21.0.0",
+    "mocha": "^3.5.0",
+    "nodemon": "^1.12.0",
+    "supertest": "^3.0.0"
+  }
+}
