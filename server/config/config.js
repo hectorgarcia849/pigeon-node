@@ -1,4 +1,4 @@
-var env = process.env.NODE_ENV; //allows us to define our environment variables. If in node, process.env.NODE_ENV will be set.  If in test, it will also be set, done in package.json in test.
+var env = process.env.NODE_ENV || 'development'; //allows us to define our environment variables. If in node, process.env.NODE_ENV will be set.  If in test, it will also be set, done in package.json in test.
 console.log('env *****', env);
 
 if(env === 'development' || env === 'test'){
