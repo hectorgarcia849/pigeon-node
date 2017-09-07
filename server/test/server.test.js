@@ -24,10 +24,10 @@ describe('POST /pigeons', () => {
             .send(pigeon)
             .expect(200)
             .expect((res) => {
-                expect(res.body.body).toBe(pigeon.body);
-                expect(res.body.encounterDate).toBe(pigeon.encounterDate);
-                expect(res.body.title).toBe(pigeon.title);
-                expect(res.body.to).toBe(pigeon.to);
+                expect(res.body.pigeon.body).toBe(pigeon.body);
+                expect(res.body.pigeon.encounterDate).toBe(pigeon.encounterDate);
+                expect(res.body.pigeon.title).toBe(pigeon.title);
+                expect(res.body.pigeon.to).toBe(pigeon.to);
 
                 //check DB
                 Pigeon.find()
@@ -68,4 +68,44 @@ describe('POST /pigeons', () => {
                 }).catch((e) => done(e));
             });
     });
+});
+
+describe('GET /pigeons', () => {
+
+    it('should get all pigeons', (done) => {
+
+        request(app)
+            .get('/pigeons')
+            .expect(200)
+            .expect((res) => {
+                expect(res.body.pigeons.length).toBe(2);
+            }).end(done);
+    });
+
+});
+
+describe('GET /pigeons/:id', () => {
+
+    it('should get a pigeon with requested id', (done) => {
+
+        request(app)
+            .get(`/pigeons/${pigeons[0]._id.toHexString()}`)
+            .expect(200)
+            .expect((res) => {
+                expect(res.body.pigeon).toHaveProperty('title', pigeons[0].title);
+                expect(res.body.pigeon).toHaveProperty('body', pigeons[0].body);
+                expect(res.body.pigeon).toHaveProperty('encounterDate', pigeons[0].encounterDate);
+                expect(res.body.pigeon).toHaveProperty('to', pigeons[0].to);
+            })
+            .end(done);
+
+    });
+
+    it('should respond with an error when invalid id is passed', (done) => {
+        request(app)
+            .get(`/pigeons/${pigeons[0]._id.toHexString().concat('111')}`)
+            .expect(400)
+            .end(done);
+    });
+
 });
