@@ -107,5 +107,77 @@ describe('GET /pigeons/:id', () => {
             .expect(400)
             .end(done);
     });
+});
+
+//delete
+describe('DELETE /pigeons/:id', () => {
+
+    it('should delete the pigeon with the requested id', (done) => {
+        request(app)
+            .delete(`/pigeons/${pigeons[0]._id.toHexString()}`)
+            .expect(200)
+            .expect((res) => {
+                expect(res.body.pigeon).toHaveProperty('title', pigeons[0].title);
+                expect(res.body.pigeon).toHaveProperty('body', pigeons[0].body);
+                expect(res.body.pigeon).toHaveProperty('encounterDate', pigeons[0].encounterDate);
+                expect(res.body.pigeon).toHaveProperty('to', pigeons[0].to);
+            })
+            .end((e) => {
+                if(e){
+                    done(e);
+                }
+                //check to make sure it has been removed from the db
+                Pigeon.findOne({_id: pigeons[0]._id.toHexString()})
+                    .then((pigeon) => {
+                        expect(pigeon).toBe(null);
+                        done();
+                    })
+                    .catch((e) => {
+                        done(e);
+                    });
+            });
+    });
+
+    it('should return 404 error if pigeon does not exist', (done) => {
+
+        var id = new ObjectID().toHexString();
+
+        request(app)
+            .delete(`/pigeons/${id}`)
+            .expect(404)
+            .end(done);
+    })
+
+    it('should return 400 error if pigeon id is invalid', (done) => {
+
+        var id = new ObjectID().toHexString().concat('1');
+
+        request(app)
+            .delete(`/pigeons/${id}`)
+            .expect(400)
+            .end(done);
+    });
+
+});
+
+describe('PATCH /pigeons/:id', () => {
+
+    it('should update the pigeon', (done) => {
+
+        var changes = {encounterDate: 1, title: "New Title", body: "New body", to: "New Person"};
+
+        request(app)
+            .patch(`/pigeons/${pigeons[0]._id.toHexString()}`)
+            .send(changes)
+            .expect(200)
+            .expect((res) => {
+                expect(res.body.pigeon).toBeTruthy();
+                expect(res.body.pigeon).toHaveProperty('title', changes.title);
+                expect(res.body.pigeon).toHaveProperty('body', changes.body);
+                expect(res.body.pigeon).toHaveProperty('encounterDate', changes.encounterDate);
+                expect(res.body.pigeon).toHaveProperty('to', changes.to);
+            })
+            .end(done);
+    });
 
 });

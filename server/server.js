@@ -59,12 +59,41 @@ app.get('/pigeons/:id', (req, res) => {
 
 
 //delete
-app.delete('/pigeons:id', (req, res) => {
+app.delete('/pigeons/:id', (req, res) => {
     var id = req.params.id;
+
+    if(!ObjectID.isValid(id)){
+        return res.status(400).send();
+    }
+
+    Pigeon.findOneAndRemove({_id:id})
+        .then((pigeon) => {
+            if(!pigeon){
+                return res.status(404).send();
+            }
+            res.send({pigeon});
+    }).catch((e) => {res.status(400).send()});
 
 });
 
 //patch
+app.patch('/pigeons/:id', (req, res) => {
+    var id = req.params.id;
+    var body = _.pick(req.body, ['body', 'encounterDate', 'title', 'to']);
+
+    if (!ObjectID.isValid(id)) {
+        return res.status(400).send();
+    }
+
+    Pigeon.findOneAndUpdate({_id: id}, {$set: body}, {new: true})
+        .then((pigeon) => {
+            if (!pigeon) {
+                return res.status(404).send();
+            }
+            res.send({pigeon});
+        }).catch((e) => res.status(400).send(e));
+});
+
 
 app.listen(port, ()=>  {
     console.log(`Started up at port ${port}`);
