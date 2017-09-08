@@ -1,7 +1,13 @@
 const mongoose = require('mongoose');
+const {ObjectID} = require('mongodb');
 
 var Pigeon = mongoose.model('Pigeon',
     {
+        _creator: {
+            type: mongoose.Schema.Types.ObjectId,
+            //required: true,
+            default: null
+        },
         body: {
             type: String,
             required: true,
@@ -12,14 +18,14 @@ var Pigeon = mongoose.model('Pigeon',
             type: Number,
             required: true
         },
-        _creator: {
-            type: mongoose.Schema.Types.ObjectId,
-            //required: true
-            default: null
-        },
         encounterDate: {
             type: Number,
             required: true
+        },
+        from: {
+            type: String,
+            required: true,
+            default: "default"
         },
         title: {
             type: String,

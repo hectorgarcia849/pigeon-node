@@ -176,6 +176,7 @@ describe('PATCH /pigeons/:id', () => {
                 expect(res.body.pigeon).toHaveProperty('body', changes.body);
                 expect(res.body.pigeon).toHaveProperty('encounterDate', changes.encounterDate);
                 expect(res.body.pigeon).toHaveProperty('to', changes.to);
+                expect(res.body.pigeon).toHaveProperty('from');
             })
             .end(done);
     });
