@@ -1,4 +1,5 @@
 const {Pigeon} = require('./../../models/pigeon');
+const {Profile} = require('./../../models/profile');
 const {ObjectID} = require('mongodb');
 
 const pigeons = [
@@ -29,6 +30,45 @@ const populatePigeons = (done) => {
         .then(() => done());
 };
 
+const profiles = [
+    new Profile({
+        _owner: "Placeholder owner1",
+        username: "Hectorious",
+        firstName: "Hector",
+        lastName: "Garcia",
+        created: new Date().getTime(),
+        descriptors: ['blonde', 'tall', 'shy', 'clever'],
+        locationTimes:[{
+            country: 'Canada',
+            city: 'Toronto',
+            place: 'The Junction',
+            fromDate: Number,
+            toDate: Number
+        }]
+    }),
+    new Profile({
+        _owner: "Placeholder owner2",
+        username: "Riktassium Hectoxide",
+        firstName: "Riktor",
+        lastName: "Singlecia",
+        created: new Date().getTime(),
+        descriptors: ['blonde', 'tall', 'outgoing', 'clever'],
+        locationTimes:[{
+            country: 'Canada',
+            city: 'The 6ix',
+            place: 'The Junction',
+            fromDate: Number,
+            toDate: Number
+        }]
+    })
+];
+
+const populateProfiles = (done) => {
+    Profile.remove({})
+    .then(() => Profile.insertMany(profiles))
+    .then(() => done())
+};
+
 module.exports = {
-    pigeons, populatePigeons
+    pigeons, populatePigeons, profiles, populateProfiles
 };
