@@ -5,8 +5,7 @@ var Pigeon = mongoose.model('Pigeon',
     {
         _creator: {
             type: mongoose.Schema.Types.ObjectId,
-            //required: true,
-            default: null
+            required: true
         },
         body: {
             type: String,

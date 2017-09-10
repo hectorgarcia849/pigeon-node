@@ -9,21 +9,22 @@ const cors = require('cors');
 const {mongoose} = require('./db/mongoose');
 const {Pigeon} = require('./models/pigeon');
 const {Profile} = require('./models/profile');
+const {User} = require('./models/user');
+const {authenticate} = require('./middleware/authenticate');
 
 var app = express();
 const port = process.env.PORT || 3000;
-
 app.use(bodyParser.json());
 app.use(cors());
 
 
 //PIGEON REQUESTS
 
-app.post('/pigeons', (req, res) => {
+app.post('/pigeons', authenticate, (req, res) => {
     var pigeon = new Pigeon({
         body: req.body.body,
         created: new Date().getTime(),
-        _creator: null,
+        _creator: req.user._id,
         encounterDate: req.body.encounterDate,
         title: req.body.title,
         to: req.body.to
@@ -37,23 +38,23 @@ app.post('/pigeons', (req, res) => {
     });
 });
 
-app.get('/pigeons', (req, res) => {
+app.get('/pigeons', authenticate, (req, res) => {
 
-    Pigeon.find()
+    Pigeon.find({_creator: req.user._id})
         .then((pigeons) => {
             res.send({pigeons});
         })
         .catch((e) => res.status(404).send(e));
 });
 
-app.get('/pigeons/:id', (req, res) => {
+app.get('/pigeons/:id', authenticate, (req, res) => {
     var id = req.params.id;
 
     if(!ObjectID.isValid(id)){
         return res.status(400).send();
     }
 
-    Pigeon.findOne({_id:id})
+    Pigeon.findOne({_id:id, _creator: req.user._id})
         .then((pigeon) => {
             if(!pigeon){
                return res.status(404).send();
@@ -63,27 +64,25 @@ app.get('/pigeons/:id', (req, res) => {
         .catch((err) => res.status(404).send(e));
 });
 
-
-//delete
-app.delete('/pigeons/:id', (req, res) => {
-    var id = req.params.id;
+app.delete('/pigeons/:id', authenticate, (req, res) => {
+    const id = req.params.id;
 
     if(!ObjectID.isValid(id)){
         return res.status(400).send();
     }
 
-    Pigeon.findOneAndRemove({_id:id})
+    Pigeon.findOneAndRemove({_id:id, _creator: req.user._id})
         .then((pigeon) => {
             if(!pigeon){
                 return res.status(404).send();
             }
-            res.send({pigeon});
-    }).catch((e) => {res.status(400).send()});
+            res.status(200).send({pigeon});
+    }).catch((e) => {res.status(400).send(e)});
 
 });
 
 //patch
-app.patch('/pigeons/:id', (req, res) => {
+app.patch('/pigeons/:id', authenticate, (req, res) => {
     var id = req.params.id;
     var body = _.pick(req.body, ['body', 'encounterDate', 'title', 'to']);
 
@@ -91,7 +90,7 @@ app.patch('/pigeons/:id', (req, res) => {
         return res.status(400).send();
     }
 
-    Pigeon.findOneAndUpdate({_id: id}, {$set: body}, {new: true})
+    Pigeon.findOneAndUpdate({_id: id, _creator: req.user._id}, {$set: body}, {new: true})
         .then((pigeon) => {
             if (!pigeon) {
                 return res.status(404).send();
@@ -103,9 +102,9 @@ app.patch('/pigeons/:id', (req, res) => {
 
 //PROFILE REQUESTS
 
-app.post('/profile', (req, res) => {
+app.post('/profile', authenticate, (req, res) => {
     const profile = new Profile({
-        _owner: req.body._owner,
+        _owner: req.user._id,
         username: req.body.username,
         created: req.body.created,
         firstName: req.body.firstName,
@@ -120,7 +119,7 @@ app.post('/profile', (req, res) => {
 
 //how do we get the correct profile?  Profiles will be referenced by the '_owner' -- so when requesting, :id field will be the _owner.
 
-app.get('/profile/:id', (req, res) => {
+app.get('/profile/:id', authenticate, (req, res) => {
     const id = req.params.id;
 
     Profile.findOne({_owner:id})
@@ -130,7 +129,7 @@ app.get('/profile/:id', (req, res) => {
 
 });
 
-app.patch('/profile/:id', (req, res) => {
+app.patch('/profile/:id', authenticate, (req, res) => {
     const id = req.params.id;
     const body = _.pick(req.body, ['username', 'created', 'firstName', 'lastName', 'locationTimes', 'descriptors']);
 
@@ -144,7 +143,7 @@ app.patch('/profile/:id', (req, res) => {
         .catch((e) => res.send(e));
 });
 
-app.delete('/profile/:id', (req, res) => {
+app.delete('/profile/:id', authenticate, (req, res) => {
     const id = req.params.id;
 
     Profile.findOneAndRemove({_owner:id})
@@ -155,6 +154,46 @@ app.delete('/profile/:id', (req, res) => {
             res.send({profile});
         })
         .catch((e) => res.send(e));
+});
+
+
+//user requests
+
+app.post('/users', (req, res) => {
+    const body = _.pick(req.body, ['email', 'password']);
+    var user = new User(body);
+
+    user.save()
+        .then(() => {
+            return user.generateAuthToken()})
+        .then((token) => {res.header('x-auth', token).send(user);})
+        .catch((e) => {
+            res.status(400).send(e);
+        })
+});
+
+app.get('/users/me', authenticate, (req, res) => {
+    res.send(req.user);
+});
+
+app.post('/users/login', (req, res) => {
+   var body = _.pick(req.body, ['email', 'password']);
+   User.findByCredentials(body.email, body.password).then((user) => {
+      return user.generateAuthToken().then((token) => {
+          res.header('x-auth', token).send(user);
+      }).catch((e) => {
+          res.status(400).send(e);
+      })
+   });
+});
+
+//removes token, this is a logout
+app.delete('/users/me/token', authenticate, (req, res) => {
+    req.user.removeToken(req.token).then(() => {
+       res.status(200).send();
+    }).catch((e) => {
+        res.status(400).send(e);
+    });
 });
 
 app.listen(port, ()=>  {

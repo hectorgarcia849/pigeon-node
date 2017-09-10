@@ -5,11 +5,9 @@ const {ObjectID} = require('mongodb');
 const Profile = mongoose.model('Profile',
     {
         _owner: {
-            //type: mongoose.Schema.Types.ObjectId,
-            //required: true,
-            type: String,
-            unique: true,
-            default: null
+            type: mongoose.Schema.Types.ObjectId,
+            required: true,
+            unique: true
         },
         username: {
             type: String,
