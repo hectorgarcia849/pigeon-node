@@ -119,21 +119,20 @@ app.post('/profile', authenticate, (req, res) => {
 
 //how do we get the correct profile?  Profiles will be referenced by the '_owner' -- so when requesting, :id field will be the _owner.
 
-app.get('/profile/:id', authenticate, (req, res) => {
-    const id = req.params.id;
+app.get('/profile/me', authenticate, (req, res) => {
 
-    Profile.findOne({_owner:id})
+    Profile.findOne({_owner:req.user._id})
         .then((profile) => {
             res.send({profile});
         }).catch((e) => res.status(404).send(e));
 
 });
 
-app.patch('/profile/:id', authenticate, (req, res) => {
-    const id = req.params.id;
+app.patch('/profile/me', authenticate, (req, res) => {
+
     const body = _.pick(req.body, ['username', 'created', 'firstName', 'lastName', 'locationTimes', 'descriptors']);
 
-    Profile.findOneAndUpdate({_owner:id}, {$set: body}, {new:true})
+    Profile.findOneAndUpdate({_owner:req.user._id}, {$set: body}, {new:true})
         .then((profile) => {
             if(!profile) {
                 return res.status(404).send();
@@ -143,10 +142,9 @@ app.patch('/profile/:id', authenticate, (req, res) => {
         .catch((e) => res.send(e));
 });
 
-app.delete('/profile/:id', authenticate, (req, res) => {
-    const id = req.params.id;
+app.delete('/profile/me', authenticate, (req, res) => {
 
-    Profile.findOneAndRemove({_owner:id})
+    Profile.findOneAndRemove({_owner:req.user._id})
         .then((profile) => {
             if(!profile){
                 return res.status(404).send();
@@ -191,6 +189,14 @@ app.post('/users/login', (req, res) => {
 app.delete('/users/me/token', authenticate, (req, res) => {
     req.user.removeToken(req.token).then(() => {
        res.status(200).send();
+    }).catch((e) => {
+        res.status(400).send(e);
+    });
+});
+
+app.delete('/users/me', authenticate, (req, res) => {
+    User.findOneAndRemove({_id:req.user._id}).then((user) => {
+        res.status(200).send(user);
     }).catch((e) => {
         res.status(400).send(e);
     });
