@@ -466,8 +466,8 @@ describe('POST /users/', () => {
             .expect(200)
             .expect((res) => {
                 expect(res.headers['x-auth']).toBeTruthy();
-                expect(res.body._id).toBeTruthy();
-                expect(res.body.email).toBe(email);})
+                expect(res.body.user._id).toBeTruthy();
+                expect(res.body.user.email).toBe(email);})
             .end((err) => {
                 if(err){
                     return done(err);
