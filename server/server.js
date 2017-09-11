@@ -40,7 +40,18 @@ app.post('/pigeons', authenticate, (req, res) => {
 
 app.get('/pigeons', authenticate, (req, res) => {
 
-    Pigeon.find({_creator: req.user._id})
+    Pigeon.find({})
+        .then((pigeons) => {
+            res.send({pigeons});
+        })
+        .catch((e) => res.status(404).send(e));
+});
+
+app.get('/pigeons/owner/:id', authenticate, (req, res) => {
+
+    const id = req.params.id;
+
+    Pigeon.find({_creator: id})
         .then((pigeons) => {
             res.send({pigeons});
         })
@@ -54,7 +65,7 @@ app.get('/pigeons/:id', authenticate, (req, res) => {
         return res.status(400).send();
     }
 
-    Pigeon.findOne({_id:id, _creator: req.user._id})
+    Pigeon.findOne({_id:id})
         .then((pigeon) => {
             if(!pigeon){
                return res.status(404).send();
@@ -103,10 +114,11 @@ app.patch('/pigeons/:id', authenticate, (req, res) => {
 //PROFILE REQUESTS
 
 app.post('/profile', authenticate, (req, res) => {
+
     const profile = new Profile({
         _owner: req.user._id,
         username: req.body.username,
-        created: req.body.created,
+        created: new Date().getTime(),
         firstName: req.body.firstName,
         lastName: req.body.lastName,
         descriptors: req.body.descriptors,
@@ -116,8 +128,6 @@ app.post('/profile', authenticate, (req, res) => {
         .then((profile) => res.send({profile}))
         .catch((e) => res.status(400).send(e));
 });
-
-//how do we get the correct profile?  Profiles will be referenced by the '_owner' -- so when requesting, :id field will be the _owner.
 
 app.get('/profile/me', authenticate, (req, res) => {
 
@@ -196,7 +206,7 @@ app.delete('/users/me/token', authenticate, (req, res) => {
 
 app.delete('/users/me', authenticate, (req, res) => {
     User.findOneAndRemove({_id:req.user._id}).then((user) => {
-        res.status(200).send(user);
+        res.status(200).send({user});
     }).catch((e) => {
         res.status(400).send(e);
     });

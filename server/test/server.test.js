@@ -5,13 +5,16 @@ const {ObjectID} = require('mongodb');
 const {app} = require('./../server');
 const {Pigeon} = require('./../models/pigeon');
 const {Profile} = require('./../models/profile');
-const {pigeons, populatePigeons, profiles, populateProfiles} = require('./seed/seed');
+const {User} = require('./../models/user');
+const {pigeons, populatePigeons, profiles, populateProfiles, users, populateUsers} = require('./seed/seed');
 
+beforeEach(populateUsers);
 beforeEach(populatePigeons);
 beforeEach(populateProfiles);
 
 describe('POST /pigeons', () => {
 
+    const _creator = users[0]._id;
     const body = 'Fly pigeon! Fly!';
     const encounterDate = 1451520000;
     const title = 'First pigeon unleashed';
@@ -19,13 +22,15 @@ describe('POST /pigeons', () => {
 
     it('should create a new pigeon', (done) => {
 
-        const pigeon = new Pigeon({body, encounterDate, title, to});
+        const pigeon = new Pigeon({body, encounterDate, title, to, _creator});
 
         request(app)
             .post('/pigeons')
+            .set('x-auth', users[0].tokens[0].token)
             .send(pigeon)
             .expect(200)
             .expect((res) => {
+                expect(res.body.pigeon._owner).toBe(pigeon._owner);
                 expect(res.body.pigeon.body).toBe(pigeon.body);
                 expect(res.body.pigeon.encounterDate).toBe(pigeon.encounterDate);
                 expect(res.body.pigeon.title).toBe(pigeon.title);
@@ -35,10 +40,11 @@ describe('POST /pigeons', () => {
                 Pigeon.find()
                     .then((pigeons) => {
                         expect(pigeons.length).toBe(3);
-                        expect(pigeons[pigeons.length-1].body).toBe(body);
-                        expect(pigeons[pigeons.length-1].encounterDate).toBe(encounterDate);
-                        expect(pigeons[pigeons.length-1].title).toBe(title);
-                        expect(pigeons[pigeons.length-1].to).toBe(to);
+                        expect(pigeons[pigeons.length-1]._owner).toBe(pigeon._owner);
+                        expect(pigeons[pigeons.length-1].body).toBe(pigeon.body);
+                        expect(pigeons[pigeons.length-1].encounterDate).toBe(pigeon.encounterDate);
+                        expect(pigeons[pigeons.length-1].title).toBe(pigeon.title);
+                        expect(pigeons[pigeons.length-1].to).toBe(pigeon.to);
                         done();
                     })
                     .catch((e) => done(e));
@@ -52,11 +58,13 @@ describe('POST /pigeons', () => {
 
     it('should not create a pigeon with invalid body', (done) => {
 
-        var body = '';
-        var pigeon = new Pigeon({body, encounterDate, title, to});
+        const body = '';
+        const _creator = users[0]._id;
+        const pigeon = new Pigeon({body, encounterDate, title, to, _creator});
 
         request(app)
             .post('/pigeons')
+            .set('x-auth', users[0].tokens[0].token)
             .send(pigeon)
             .expect(400)
             .end((err, res) => {
@@ -78,6 +86,7 @@ describe('GET /pigeons', () => {
 
         request(app)
             .get('/pigeons')
+            .set('x-auth', users[0].tokens[0].token)
             .expect(200)
             .expect((res) => {
                 expect(res.body.pigeons.length).toBe(2);
@@ -86,12 +95,28 @@ describe('GET /pigeons', () => {
 
 });
 
+describe('GET /pigeons/owner/:id', () => {
+    it('should get pigeons that belong to an owner', (done) => {
+        request(app)
+            .get(`/pigeons/owner/${users[0]._id.toHexString()}`)
+            .set('x-auth', users[0].tokens[0].token)
+            .expect(200)
+            .expect((res) => {
+                expect(res.body.pigeons.length).toBe(1);
+                expect(res.body.pigeons[0]._creator.toString()).toBe(users[0]._id.toString())
+            }).end(done);
+    });
+
+});
+
+
 describe('GET /pigeons/:id', () => {
 
     it('should get a pigeon with requested id', (done) => {
 
         request(app)
             .get(`/pigeons/${pigeons[0]._id.toHexString()}`)
+            .set('x-auth', users[0].tokens[0].token)
             .expect(200)
             .expect((res) => {
                 expect(res.body.pigeon).toHaveProperty('title', pigeons[0].title);
@@ -106,6 +131,7 @@ describe('GET /pigeons/:id', () => {
     it('should respond with an error when invalid id is passed', (done) => {
         request(app)
             .get(`/pigeons/${pigeons[0]._id.toHexString().concat('111')}`)
+            .set('x-auth', users[0].tokens[0].token)
             .expect(400)
             .end(done);
     });
@@ -117,8 +143,10 @@ describe('DELETE /pigeons/:id', () => {
     it('should delete the pigeon with the requested id', (done) => {
         request(app)
             .delete(`/pigeons/${pigeons[0]._id.toHexString()}`)
+            .set('x-auth', users[0].tokens[0].token)
             .expect(200)
             .expect((res) => {
+                expect(res.body.pigeon).toHaveProperty('_creator', pigeons[0]._creator.toString());
                 expect(res.body.pigeon).toHaveProperty('title', pigeons[0].title);
                 expect(res.body.pigeon).toHaveProperty('body', pigeons[0].body);
                 expect(res.body.pigeon).toHaveProperty('encounterDate', pigeons[0].encounterDate);
@@ -127,16 +155,18 @@ describe('DELETE /pigeons/:id', () => {
             .end((e) => {
                 if(e){
                     done(e);
+                } else {
+
+                    //check to make sure it has been removed from the db
+                    Pigeon.findOne({_id: pigeons[0]._id.toHexString()})
+                        .then((pigeon) => {
+                            expect(pigeon).toBe(null);
+                            done();
+                        })
+                        .catch((e) => {
+                            done(e);
+                        });
                 }
-                //check to make sure it has been removed from the db
-                Pigeon.findOne({_id: pigeons[0]._id.toHexString()})
-                    .then((pigeon) => {
-                        expect(pigeon).toBe(null);
-                        done();
-                    })
-                    .catch((e) => {
-                        done(e);
-                    });
             });
     });
 
@@ -146,6 +176,7 @@ describe('DELETE /pigeons/:id', () => {
 
         request(app)
             .delete(`/pigeons/${id}`)
+            .set('x-auth', users[0].tokens[0].token)
             .expect(404)
             .end(done);
     })
@@ -156,20 +187,45 @@ describe('DELETE /pigeons/:id', () => {
 
         request(app)
             .delete(`/pigeons/${id}`)
+            .set('x-auth', users[0].tokens[0].token)
             .expect(400)
             .end(done);
     });
 
+    it('should not allow non-creators to delete pigeons', (done) => {
+        request(app)
+            .delete(`/pigeons/${pigeons[0]._id.toHexString()}`)
+            .set('x-auth', users[1].tokens[0].token)
+            .expect(404)
+            .end((err) => {
+                if(err){
+                    expect(400);
+                    return done(err);
+                }
+
+                //check that the deletion did not happen
+                Pigeon.findById(pigeons[0]._id.toHexString())
+                    .then((pigeon) => {
+                        expect(pigeon).toBeTruthy();
+                        done();
+                }).catch((e) => {
+                    done(e);
+                });
+
+
+            });
+    });
 });
 
 describe('PATCH /pigeons/:id', () => {
 
-    it('should update the pigeon', (done) => {
+    const changes = {encounterDate: 1, title: "New Title", body: "New body", to: "New Person"};
 
-        var changes = {encounterDate: 1, title: "New Title", body: "New body", to: "New Person"};
+    it('should update the pigeon', (done) => {
 
         request(app)
             .patch(`/pigeons/${pigeons[0]._id.toHexString()}`)
+            .set('x-auth', users[0].tokens[0].token)
             .send(changes)
             .expect(200)
             .expect((res) => {
@@ -183,58 +239,75 @@ describe('PATCH /pigeons/:id', () => {
             .end(done);
     });
 
+    it('should not allow other users to update the pigeon', (done) => {
+
+        request(app)
+            .patch(`/pigeons/${pigeons[0]._id.toHexString()}`)
+            .set('x-auth', users[1].tokens[0].token)
+            .send(changes)
+            .expect(404)
+            .end(done);
+    });
+
 });
 
-describe('POST /profile/', () => {
+describe('POST /profile', () => {
 
-    var profile = new Profile({
-        _owner:"Placeholder owner3",
-        username:"Hectorious849",
+    const profile = {
+        username:"Unique849",
         firstName:"Hector",
         lastName:"Garcia",
-        created: new Date().getTime(),
         descriptors:['brunette'],
         locationTimes:[
             {country:'Thailand', city:'Phuket', place:'Siam no. 1', fromDate: 1478612334000, toDate: 1481204334000},
             {country:'India', city:'Bombay', place:'Indian gate', fromDate: 1478612335000, toDate: 1481204336000},
             {country:'Australia', city:'Sydney', place:'Sydney Harbour', fromDate: 1478812334000, toDate: 1489204334000}
         ]
-    });
+    };
 
     it('should create a new profile', (done) => {
 
-        request(app)
-            .post('/profile')
-            .send(profile)
-            .expect(200)
-            .expect((res) => {
-                expect(res.body.profile._owner).toBe(profile._owner);
-                expect(res.body.profile.username).toBe(profile.username);
-                expect(res.body.profile.firstName).toBe(profile.firstName);
-                expect(res.body.profile.lastName).toBe(profile.lastName);
-                expect(res.body.profile.created).toBe(profile.created);
-                expect(res.body.profile.descriptors).toEqual(expect.arrayContaining(profile.descriptors));
-                //profile.locationTimes.forEach((locationTime) => {expect(res.body.profile.locationTimes).toContain(locationTime)});
-                //expect(res.body.profile.locationTimes).toBe(profile.locationTimes);
+        //need to remove existing profile for users[0]
+        Profile.findOneAndRemove({_owner: users[0]._id}).then(() => {
 
-            })
-            .end((err) => {
-                if (err) {
-                    done(err);
-                }
-                Profile.findOne({_owner:profile._owner})
-                    .then((p) => {
-                        expect(p._owner).toBe(profile._owner);
-                        expect(p.username).toBe(profile.username);
-                        expect(p.firstName).toBe(profile.firstName);
-                        expect(p.lastName).toBe(profile.lastName);
-                        expect(p.created).toBe(profile.created);
-                        expect(p.descriptors).toEqual(expect.arrayContaining(profile.descriptors));
-                        //expect(p.locationTimes).toBe(profile.locationTimes);
-                        done();
-                    }).catch((e) => done(e));
-            });
+            request(app)
+                .post('/profile')
+                .set('x-auth', users[0].tokens[0].token)
+                .send(profile)
+                .expect(200)
+                .expect((res) => {
+                    expect(res.body.profile._owner).toBe(users[0]._id.toString());
+                    expect(res.body.profile.username).toBe(profile.username);
+                    expect(res.body.profile.firstName).toBe(profile.firstName);
+                    expect(res.body.profile.lastName).toBe(profile.lastName);
+                    expect(res.body.profile.descriptors).toEqual(expect.arrayContaining(profile.descriptors));
+                    //profile.locationTimes.forEach((locationTime) => {expect(res.body.profile.locationTimes).toContain(locationTime)});
+                    //expect(res.body.profile.locationTimes).toBe(profile.locationTimes);
+
+                    Profile.findOne({_owner: users[0]._id})
+                        .then((p) => {
+                            //expect(p._owner).toBe(users[0]._id);
+                            expect(p.username).toBe(profile.username);
+                            expect(p.firstName).toBe(profile.firstName);
+                            expect(p.lastName).toBe(profile.lastName);
+                            expect(typeof p.created === 'number').toBe(true);
+                            expect(p.descriptors).toEqual(expect.arrayContaining(profile.descriptors));
+                            //expect(p.locationTimes).toBe(profile.locationTimes);
+                            done();
+                        }).catch((e) => done(e));
+
+                })
+                .end((err) => {
+                    if (err) {
+                        done(err);
+                    }
+                });
         });
+
+
+    });
+
+
 
     it('should not create a profile with an invalid body', (done) => {
 
@@ -244,12 +317,13 @@ describe('POST /profile/', () => {
 
         request(app)
             .post('/profile')
+            .set('x-auth', users[0].tokens[0].token)
             .send(profile)
             .expect(400)
             .end(done);
     });
 
-    it('should prevent the creation of profiles that share _owner', (done) => {
+    it('should only allow unique _owner ids in each profile on creation', (done) => {
 
         profile.lastName = "Garcia";
         profile.firstName = "Hector";
@@ -258,6 +332,7 @@ describe('POST /profile/', () => {
 
         request(app)
             .post('/profile')
+            .set('x-auth', users[0].tokens[0].token)
             .send(profile)
             .expect(400)
             .end(done);
@@ -270,6 +345,7 @@ describe('POST /profile/', () => {
 
         request(app)
             .post('/profile')
+            .set('x-auth', users[0].tokens[0].token)
             .send(profile)
             .expect(400)
             .end(done);
@@ -277,16 +353,17 @@ describe('POST /profile/', () => {
 
 });
 
-describe('GET /profile/:id', () => {
+describe('GET /profile/me', () => {
 
     it('should get profile with the specified _owner', (done) => {
 
         request(app)
-            .get(`/profile/${profiles[0]._owner}`)
+            .get(`/profile/me`)
+            .set('x-auth', users[0].tokens[0].token)
             .expect(200)
             .expect((res) => {
                 //expect(res.body.profile.locationTimes).toMatchObject(profiles[0].locationTimes);
-                expect(res.body.profile).toHaveProperty('_owner', profiles[0]._owner);
+                expect(res.body.profile).toHaveProperty('_owner', profiles[0]._owner.toString());
                 expect(res.body.profile).toHaveProperty('username', profiles[0].username);
                 expect(res.body.profile).toHaveProperty('firstName', profiles[0].firstName);
                 expect(res.body.profile).toHaveProperty('lastName', profiles[0].lastName);
@@ -298,26 +375,18 @@ describe('GET /profile/:id', () => {
             });
     });
 
-    it('should not retreive a profile if invalid id given', (done) => {
-
-        request(app)
-            .get(`/profiles/${123}`)
-            .expect(404) //need to update status code responses once auth implemented
-            .end(done);
-
-    });
-
 });
 
-describe('DELETE /profile/:id', () => {
+describe('DELETE /profile/me', () => {
 
     it('should delete the profile with specified id', (done) => {
 
         request(app)
-            .delete(`/profile/${profiles[0]._owner}`)
+            .delete(`/profile/me`)
+            .set('x-auth', users[0].tokens[0].token)
             .expect(200)
             .expect((res) => {
-                expect(res.body.profile).toHaveProperty('_owner', profiles[0]._owner);
+                expect(res.body.profile).toHaveProperty('_owner', profiles[0]._owner.toString());
                 expect(res.body.profile).toHaveProperty('username', profiles[0].username);
                 expect(res.body.profile).toHaveProperty('firstName', profiles[0].firstName);
                 expect(res.body.profile).toHaveProperty('lastName', profiles[0].lastName);
@@ -336,35 +405,28 @@ describe('DELETE /profile/:id', () => {
             });
     });
 
-    it('should return status 400 if invalid id passed', (done) => {
-
-        request(app)
-            .delete(`/profile/${'123'}`)
-            .expect(404) //need to update status code responses once auth implemented
-            .end(done);
-
-    });
-
-
 });
 
-describe('PATCH /profile/:id', () => {
+describe('PATCH /profile/me', () => {
+
+    const updatedProfile = {
+        _owner: users[0]._id,
+        username: "New USERRRR",
+        firstName: "Real First Name",
+        lastName: "Real Last Name",
+        descriptors: ['real descriptor', 'another real descriptor'],
+        locationTimes: [
+            {country:'Thailand', city:'Bangkok', place:'Siam no. 2', fromDate: 1478612335000, toDate: 1481204335000},
+            {country:'India', city:'New Delhi', place:'India gate', fromDate: 1478612335000, toDate: 1481204336000},
+            {country:'Australia', city:'Tasmania', place:'Winery', fromDate: 1478812334000, toDate: 1489204334000}
+        ]
+    };
 
     it('should update the profile', (done) => {
-        const updatedProfile = {
-            username: "New USERRRR",
-            firstName: "Real First Name",
-            lastName: "Real Last Name",
-            descriptors: ['real descriptor', 'another real descriptor'],
-            locationTimes: [
-                {country:'Thailand', city:'Bangkok', place:'Siam no. 2', fromDate: 1478612335000, toDate: 1481204335000},
-                {country:'India', city:'New Delhi', place:'India gate', fromDate: 1478612335000, toDate: 1481204336000},
-                {country:'Australia', city:'Tasmania', place:'Winery', fromDate: 1478812334000, toDate: 1489204334000}
-            ]
-        };
 
         request(app)
-            .patch(`/profile/${profiles[0]._owner}`)
+            .patch(`/profile/me`)
+            .set('x-auth', users[0].tokens[0].token)
             .send(updatedProfile)
             .expect(200)
             .expect((res) => {
@@ -389,3 +451,81 @@ describe('PATCH /profile/:id', () => {
     });
 
 });
+
+//Users
+describe('POST /users/', () => {
+
+    it('should create a new user', (done) => {
+
+        const email = 'newEmail@email.com';
+        const password = 'password123';
+
+        request(app)
+            .post('/users')
+            .send({email, password})
+            .expect(200)
+            .expect((res) => {
+                expect(res.headers['x-auth']).toBeTruthy();
+                expect(res.body._id).toBeTruthy();
+                expect(res.body.email).toBe(email);})
+            .end((err) => {
+                if(err){
+                    return done(err);
+                }
+
+                User.findOne({email}).then((user) => {
+                    expect(user).toBeTruthy();
+                    expect(user.password).not.toBe(password);
+                    done();
+                }).catch((e) => done(e));
+            });
+    });
+
+});
+
+describe('POST /users/login', () => {
+
+    it('should create a new token for the user', (done) => {
+
+        const email = 'hectorino@gmail.com';
+        const password = 'password1';
+
+        request(app)
+            .post('/users/login')
+            .send({email, password})
+            .expect(200)
+            .expect((res) => {
+                expect(res.headers['x-auth']).toBeTruthy();
+                User.findByCredentials(email, password)
+                    .then((user) => {
+                        expect(user.tokens.length).toBe(2);
+                    }).catch((e) => done(e))
+            }).end((err) => {
+                if(err){done(err)}
+                done();
+            });
+    });
+
+});
+
+describe('DELETE /users/me/token', () => {
+
+    it('should remove a token from the user for logging out', (done) => {
+        request(app)
+            .delete('/users/me/token')
+            .set('x-auth', users[0].tokens[0].token)
+            .expect(200)
+            .end((err) => {
+                if(err){
+                    done(err);
+                }
+                User.findById(users[0]._id)
+                    .then((user) => {
+                        expect(user.tokens.length).toBe(0);
+                        done();
+                    }).catch((err) => {done(err);});
+            });
+        });
+});
+
+

@@ -1,10 +1,35 @@
 const {Pigeon} = require('./../../models/pigeon');
 const {Profile} = require('./../../models/profile');
 const {ObjectID} = require('mongodb');
+const {User} = require('./../../models/user');
+const jwt = require('jsonwebtoken');
+
+
+const userOneId = new ObjectID();
+const userTwoId = new ObjectID();
+
+const users = [
+    {_id:userOneId, email: 'hectorino@gmail.com', password: 'password1', tokens:[{access: 'auth', token: jwt.sign({_id:userOneId, access:'auth'}, process.env.JWT_SECRET).toString()}]},
+    {_id:userTwoId, email: 'hectorious@gmail.com', password: 'password2', tokens:[{access: 'auth', token: jwt.sign({_id:userTwoId, access:'auth'}, process.env.JWT_SECRET).toString()}]}
+];
+
+
+const populateUsers = (done) => {
+    User.remove({}).then(() => {
+        //add users in a way that hashes passwords
+        var userOne = new User(users[0]).save();
+        var userTwo = new User(users[1]).save();
+
+        //to make sure both save promises succeed before proceeding
+        return Promise.all([userOne, userTwo]);
+    }).then(() => done());
+};
+
 
 const pigeons = [
     new Pigeon(
         {
+            _creator: userOneId,
             _id: new ObjectID(),
             body: 'This is the story of a man named Hurricane',
             created: new Date().getTime(),
@@ -14,6 +39,7 @@ const pigeons = [
         }),
     new Pigeon(
         {
+            _creator: userTwoId,
             _id: new ObjectID(),
             body: 'This is the story of a woman named Tsunami',
             created: new Date().getTime(),
@@ -32,7 +58,7 @@ const populatePigeons = (done) => {
 
 const profiles = [
     new Profile({
-        _owner: "Placeholder owner1",
+        _owner: userOneId,
         username: "Hectorious",
         firstName: "Hector",
         lastName: "Garcia",
@@ -47,7 +73,7 @@ const profiles = [
         }]
     }),
     new Profile({
-        _owner: "Placeholder owner2",
+        _owner: userTwoId,
         username: "Riktassium Hectoxide",
         firstName: "Riktor",
         lastName: "Singlecia",
@@ -70,5 +96,5 @@ const populateProfiles = (done) => {
 };
 
 module.exports = {
-    pigeons, populatePigeons, profiles, populateProfiles
+    pigeons, populatePigeons, profiles, populateProfiles, users, populateUsers
 };
