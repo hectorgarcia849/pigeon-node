@@ -24,7 +24,6 @@ var Pigeon = mongoose.model('Pigeon',
         from: {
             type: String,
             required: true,
-            default: "default"
         },
         title: {
             type: String,

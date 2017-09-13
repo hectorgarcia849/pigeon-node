@@ -16,7 +16,8 @@ pigeonsRouter.post('/', authenticate, (req, res) =>
         _creator: decoded._id,
         encounterDate: req.body.encounterDate,
         title: req.body.title,
-        to: req.body.to
+        to: req.body.to,
+        from: req.body.from
     });
 
     pigeon.save()
