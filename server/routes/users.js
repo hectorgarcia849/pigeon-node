@@ -27,10 +27,10 @@ usersRouter.get('/me', authenticate, (req, res) => {
 
 usersRouter.post('/login', (req, res) => {
     const body = _.pick(req.body, ['email', 'password']);
-    const token = user.generateAuthToken();
     User.findByCredentials(body.email, body.password)
         .then((user) => {
-            res.header('x-auth', user.generateAuthToken()).send({user, token})})
+            const token = user.generateAuthToken();
+            res.header('x-auth', token).send({user, token})})
         .catch((e) => {
             res.status(400).send(e);
         });
