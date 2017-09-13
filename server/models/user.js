@@ -20,26 +20,13 @@ const UserSchema = new mongoose.Schema({
         type: String,
         require: true,
         minlength: 6
-    },
-    tokens: [{
-        access: {
-            type: String,
-            required: true
-        },
-        token: {
-           type: String,
-           required: true
-        }
-    }]
+    }
 });
 
 UserSchema.methods.generateAuthToken = function () {
-    var user = this;
-    var access = 'auth';
-    var token = jwt.sign({_id: user._id.toHexString(), access}, process.env.JWT_SECRET).toString();
-
-    user.tokens.push({access, token});
-    return user.save().then(() => {return token});
+    const user = this;
+    const access = 'auth';
+    return jwt.sign({_id: user._id.toHexString(), access}, process.env.JWT_SECRET).toString();
 };
 
 UserSchema.methods.toJSON = function () {
@@ -48,31 +35,6 @@ UserSchema.methods.toJSON = function () {
     var userObject = user.toObject();
     return _.pick(userObject, ['_id', 'email']);
 
-};
-
-UserSchema.methods.removeToken = function (token) {
-    var user = this;
-    return user.update({
-      $pull: {
-          tokens: {
-              token: token
-          }
-      }
-    });
-};
-
-UserSchema.statics.findByToken = function (token){
-    var User = this;
-    var decoded;
-
-    try {
-        decoded = jwt.verify(token, process.env.JWT_SECRET);
-    }
-    catch(e){
-        return Promise.reject(e);
-    }
-
-    return User.findOne({'_id':decoded._id, 'tokens.token': token, 'tokens.access': 'auth'});
 };
 
 UserSchema.statics.findByCredentials = function(email, password) {

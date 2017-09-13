@@ -1,19 +1,16 @@
-var {User} = require('./../models/user');
+var jwt = require('jsonwebtoken');
+
 
 var authenticate = (req, res, next) => {
 
-    var token = req.header('x-auth');
-
-    User.findByToken(token).then((user) => {
-        if(!user) {
-            return Promise.reject();
+    jwt.verify(req.query.token, process.env.JWT_SECRET, (err, decoded) => {
+        if(err){
+            return res.status(401).json({
+                title: 'Not Authenticated',
+                error: err
+            });
         }
-
-        req.user = user;
-        req.token = token;
         next();
-    }).catch((e) => {
-        res.status(401).send(e);
     });
 };
 
