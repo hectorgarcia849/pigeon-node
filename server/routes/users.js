@@ -11,9 +11,9 @@ const {User} = require('./../models/user');
 usersRouter.post('/', (req, res) => {
     const body = _.pick(req.body, ['email', 'password']); //middleware in the User model encrypts the password
     const user = new User(body);
-
+    const token = user.generateAuthToken();
     user.save()
-        .then((user) => {res.header('x-auth', user.generateAuthToken()).send({user})})
+        .then((user) => {res.header('x-auth', user.generateAuthToken()).send({user, token})})
         .catch((e) => res.status(400).send(e));
 });
 
@@ -27,10 +27,10 @@ usersRouter.get('/me', authenticate, (req, res) => {
 
 usersRouter.post('/login', (req, res) => {
     const body = _.pick(req.body, ['email', 'password']);
-
+    const token = user.generateAuthToken();
     User.findByCredentials(body.email, body.password)
         .then((user) => {
-            res.header('x-auth', user.generateAuthToken()).send({user})})
+            res.header('x-auth', user.generateAuthToken()).send({user, token})})
         .catch((e) => {
             res.status(400).send(e);
         });
