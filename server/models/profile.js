@@ -18,13 +18,11 @@ const Profile = mongoose.model('Profile',
         },
         firstName: {
             type: String,
-            required: true,
             minlength: 1,
             trim: true
         },
         lastName: {
             type: String,
-            required: true,
             minlength: 1,
             trim: true
         },
@@ -41,16 +39,6 @@ const Profile = mongoose.model('Profile',
                 fromDate: Number,
                 toDate: Number
             }]
-        // descriptors:{
-        //     type: Array,
-        //     required: true,
-        //     default: []
-        // },
-        // locationTimes:{
-        //     type: Array,
-        //     required: true,
-        //     default: []
-        // }
     }
 );
 
