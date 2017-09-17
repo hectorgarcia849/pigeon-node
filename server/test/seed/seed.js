@@ -5,14 +5,11 @@ const {User} = require('./../../models/user');
 const jwt = require('jsonwebtoken');
 
 
-const userOneId = new ObjectID();
-const userTwoId = new ObjectID();
+const users = [new User({email: 'hectorino@gmail.com', password: 'password1'}), new User({email: 'hectorious@gmail.com', password: 'password2'})];
+const tokens =  [users[0].generateAuthToken(), users[1].generateAuthToken()];
 
-const users = [
-    {_id:userOneId, email: 'hectorino@gmail.com', password: 'password1', tokens:[{access: 'auth', token: jwt.sign({_id:userOneId, access:'auth'}, process.env.JWT_SECRET).toString()}]},
-    {_id:userTwoId, email: 'hectorious@gmail.com', password: 'password2', tokens:[{access: 'auth', token: jwt.sign({_id:userTwoId, access:'auth'}, process.env.JWT_SECRET).toString()}]}
-];
-
+const userOneId = users[0]._id;
+const userTwoId = users[1]._id;
 
 const populateUsers = (done) => {
     User.remove({}).then(() => {
@@ -23,37 +20,6 @@ const populateUsers = (done) => {
         //to make sure both save promises succeed before proceeding
         return Promise.all([userOne, userTwo]);
     }).then(() => done());
-};
-
-
-const pigeons = [
-    new Pigeon(
-        {
-            _creator: userOneId,
-            _id: new ObjectID(),
-            body: 'This is the story of a man named Hurricane',
-            created: new Date().getTime(),
-            encounterDate: 1476057600,
-            title: "Just another pigeon in the wind",
-            to: "Hurricane"
-        }),
-    new Pigeon(
-        {
-            _creator: userTwoId,
-            _id: new ObjectID(),
-            body: 'This is the story of a woman named Tsunami',
-            created: new Date().getTime(),
-            encounterDate: 1476060600,
-            title: "Just another pigeon in the storm",
-            to: "Tsunami"
-        }
-    )
-];
-
-const populatePigeons = (done) => {
-    Pigeon.remove({})
-        .then(() => Pigeon.insertMany(pigeons))
-        .then(() => done());
 };
 
 const profiles = [
@@ -89,6 +55,37 @@ const profiles = [
     })
 ];
 
+const pigeons = [
+    new Pigeon(
+        {
+            _creator: userOneId,
+            body: 'This is the story of a man named Hurricane',
+            created: new Date().getTime(),
+            encounterDate: 1476057600,
+            title: "Just another pigeon in the wind",
+            from: profiles[0].username,
+            to: "Hurricane"
+        }),
+    new Pigeon(
+        {
+            _creator: userTwoId,
+            body: 'This is the story of a woman named Tsunami',
+            created: new Date().getTime(),
+            encounterDate: 1476060600,
+            title: "Just another pigeon in the storm",
+            from: profiles[1].username,
+            to: "Tsunami"
+        }
+    )
+];
+
+const populatePigeons = (done) => {
+    Pigeon.remove({})
+        .then(() => Pigeon.insertMany(pigeons))
+        .then(() => done())
+        .catch((e) => done(e));
+};
+
 const populateProfiles = (done) => {
     Profile.remove({})
     .then(() => Profile.insertMany(profiles))
@@ -96,5 +93,5 @@ const populateProfiles = (done) => {
 };
 
 module.exports = {
-    pigeons, populatePigeons, profiles, populateProfiles, users, populateUsers
+    pigeons, populatePigeons, profiles, populateProfiles, users, populateUsers, tokens
 };
