@@ -123,7 +123,6 @@ describe('GET /pigeons/:id', () => {
                 expect(res.body.pigeon).toHaveProperty('encounterDate', pigeons[0].encounterDate);
                 expect(res.body.pigeon).toHaveProperty('to', pigeons[0].to);
                 expect(res.body.pigeon).toHaveProperty('from', pigeons[0].from);
-
             })
             .end(done);
 
@@ -479,7 +478,6 @@ describe('POST /users/login', () => {
             .send({email, password})
             .expect(200)
             .expect((res) => {
-                //expect(res.headers['x-auth']).toBeTruthy();
                 User.findByCredentials(email, password)
                     .then((user) => {
                         //expect(user.tokens.length).toBe(2);

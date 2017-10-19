@@ -3,8 +3,7 @@ const {ObjectID} = require('mongodb');
 const pigeonsRouter = express.Router();
 const _ = require('lodash');
 const jwt = require('jsonwebtoken');
-
-const {Pigeon} = require('./../models/pigeon');
+const {Pigeon} = require('@softwaresamurai/pigeon-mongo-models');
 const {authenticate} = require('./../middleware/authenticate');
 
 pigeonsRouter.post('/', authenticate, (req, res) =>

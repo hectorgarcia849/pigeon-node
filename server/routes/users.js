@@ -3,8 +3,7 @@ const usersRouter = express.Router();
 const {authenticate} = require('./../middleware/authenticate');
 const _ = require('lodash');
 const jwt = require('jsonwebtoken');
-
-const {User} = require('./../models/user');
+const {User} = require('@softwaresamurai/pigeon-mongo-models');
 
 //user requests, sign up and log in.  Sign out handled in the front end by removing token from local storage.
 
@@ -21,7 +20,11 @@ usersRouter.get('/me', authenticate, (req, res) => {
     const decoded = jwt.decode(req.query.token);
     User.findById(decoded._id)
         .then((user) => {
-            res.send({user});
+            if(user) {
+                res.send({user});
+            } else {
+                res.status(404).send();
+            }
         });
 });
 
@@ -32,7 +35,7 @@ usersRouter.post('/login', (req, res) => {
             const token = user.generateAuthToken();
             res.header('x-auth', token).send({user, token})})
         .catch((e) => {
-            res.status(400).send(e);
+            res.status(404).send(e);
         });
 });
 

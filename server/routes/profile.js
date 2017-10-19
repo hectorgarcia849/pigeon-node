@@ -3,8 +3,7 @@ const profileRouter = express.Router();
 const {authenticate} = require('./../middleware/authenticate');
 const _ = require('lodash');
 const jwt = require('jsonwebtoken');
-
-const {Profile} = require('./../models/profile');
+const {Profile} = require('@softwaresamurai/pigeon-mongo-models');
 
 
 //PROFILE REQUESTS
@@ -44,10 +43,10 @@ profileRouter.patch('/me', authenticate, (req, res) => {
 
     Profile.findOneAndUpdate({_owner:decoded._id}, {$set: body}, {new:true})
         .then((profile) => {
-            if(!profile) {
-                return res.status(404).send();
+            if(profile) {
+                return res.send({profile});
             }
-            res.send({profile});
+            res.status(404).send();
         })
         .catch((e) => res.send(e));
 });
