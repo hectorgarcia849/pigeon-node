@@ -3,15 +3,14 @@ const request = require('supertest');
 const {ObjectID} = require('mongodb');
 
 const {app} = require('./../server');
-const {Pigeon} = require('./../models/pigeon');
-const {Profile} = require('./../models/profile');
-const {User} = require('./../models/user');
-const {pigeons, populatePigeons, profiles, populateProfiles, users, populateUsers} = require('./seed/seed');
+const {Pigeon, Profile, User, ChatProfile } = require('@softwaresamurai/pigeon-mongo-models');
+const {pigeons, populatePigeons, profiles, populateProfiles, users, populateUsers, chatProfiles, populateChatProfiles} = require('./seed/seed');
 const {tokens} = require('./seed/seed');
 
 beforeEach(populateUsers);
 beforeEach(populatePigeons);
 beforeEach(populateProfiles);
+beforeEach(populateChatProfiles);
 
 describe('POST /pigeons', () => {
     const _creator = users[0]._id;
@@ -71,7 +70,6 @@ describe('POST /pigeons', () => {
                 if(err){
                     return done(err);
                 }
-
                 Pigeon.find().then((pigeons) => {
                     expect(pigeons.length).toBe(2);
                     done();
@@ -171,17 +169,17 @@ describe('DELETE /pigeons/:id', () => {
 
     it('should return 404 error if pigeon does not exist', (done) => {
 
-        var id = new ObjectID().toHexString();
+        const id = new ObjectID().toHexString();
 
         request(app)
             .delete(`/pigeons/${id}?token=${tokens[0]}`)
             .expect(404)
             .end(done);
-    })
+    });
 
     it('should return 400 error if pigeon id is invalid', (done) => {
 
-        var id = new ObjectID().toHexString().concat('1');
+        const id = new ObjectID().toHexString().concat('1');
 
         request(app)
             .delete(`/pigeons/${id}?token=${tokens[0]}`)
@@ -440,7 +438,7 @@ describe('POST /users/', () => {
 
     it('should create a new user', (done) => {
 
-        const email = 'newEmail@email.com';
+        const email = 'newemail@email.com';
         const password = 'password123';
 
         request(app)
@@ -455,7 +453,6 @@ describe('POST /users/', () => {
                 if(err){
                     return done(err);
                 }
-
                 User.findOne({email}).then((user) => {
                     expect(user).toBeTruthy();
                     expect(user.password).not.toBe(password);
@@ -483,12 +480,52 @@ describe('POST /users/login', () => {
                         //expect(user.tokens.length).toBe(2);
                     }).catch((e) => done(e))
             }).end((err) => {
-                if(err){done(err)}
+                if (err) {
+                    done(err);
+                }
                 done();
             });
     });
 
 });
+
+describe('POST /chats/profile', () => {
+
+    it('should create a new chatProfile', (done) => {
+
+        ChatProfile.findOneAndRemove({_owner: chatProfiles[0]._owner})
+            .then(() => {
+                request(app)
+                    .post(`/chats/profile?token=${tokens[0]}`)
+                    .send()
+                    .expect(200)
+                    .expect((res) => {
+                        expect(res.body.chats._id).toBeTruthy();
+                        expect(res.body.chats._owner).toBe(chatProfiles[0]._owner);
+                        expect(res.body.chats.chats).toEqual([]);
+                    })
+                    .end((err) => {
+                        if (err) {
+                            done(err);
+                        }
+                        ChatProfile.findOne({ _owner: chatProfiles[0]._owner})
+                            .then((savedChatProfile) => {
+                                expect(savedChatProfile._owner).toBe(chatProfiles[0]._owner);
+                                expect(savedChatProfile.chats).toBe([]);
+                                done();
+                            })
+                            .catch((e) => done(err));
+                    });
+            });
+
+    });
+});
+//
+// describe('GET /chat/profile', () => {
+//     it('should get the chatProfile', (done) => {
+//
+//     });
+// });
 
 // describe('DELETE /users/me/token', () => {
 //

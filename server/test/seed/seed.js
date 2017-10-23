@@ -1,7 +1,8 @@
-const {Pigeon} = require('./../../models/pigeon');
-const {Profile} = require('./../../models/profile');
+const {Pigeon} = require('@softwaresamurai/pigeon-mongo-models');
+const {Profile} = require('@softwaresamurai/pigeon-mongo-models');
 const {ObjectID} = require('mongodb');
-const {User} = require('./../../models/user');
+const {User} = require('@softwaresamurai/pigeon-mongo-models');
+const {ChatProfile} = require('@softwaresamurai/pigeon-mongo-models')
 const jwt = require('jsonwebtoken');
 
 
@@ -14,8 +15,8 @@ const userTwoId = users[1]._id;
 const populateUsers = (done) => {
     User.remove({}).then(() => {
         //add users in a way that hashes passwords
-        var userOne = new User(users[0]).save();
-        var userTwo = new User(users[1]).save();
+        const userOne = new User(users[0]).save();
+        const userTwo = new User(users[1]).save();
 
         //to make sure both save promises succeed before proceeding
         return Promise.all([userOne, userTwo]);
@@ -79,6 +80,13 @@ const pigeons = [
     )
 ];
 
+const chatProfiles = [
+    new ChatProfile({_owner: userOneId, chats:[]}),
+    new ChatProfile({_owner: userTwoId, chats:[]})
+];
+
+
+
 const populatePigeons = (done) => {
     Pigeon.remove({})
         .then(() => Pigeon.insertMany(pigeons))
@@ -88,10 +96,18 @@ const populatePigeons = (done) => {
 
 const populateProfiles = (done) => {
     Profile.remove({})
-    .then(() => Profile.insertMany(profiles))
-    .then(() => done())
+        .then(() => Profile.insertMany(profiles))
+        .then(() => done())
+        .catch((e) => done(e));
+};
+
+const populateChatProfiles = (done) => {
+    ChatProfile.remove({})
+        .then(() => ChatProfile.insertMany(chatProfiles))
+        .then(() => done())
+        .catch((e) => done(e));
 };
 
 module.exports = {
-    pigeons, populatePigeons, profiles, populateProfiles, users, populateUsers, tokens
+    pigeons, populatePigeons, profiles, populateProfiles, users, populateUsers, tokens, populateChatProfiles, chatProfiles
 };
